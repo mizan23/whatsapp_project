@@ -205,11 +205,6 @@ send_whatsapp_message(recipient_number, message_body)
 - Retry logic
 - Docker support
 
----
-
-## 📜 License
-
-This project is licensed under the **MIT License**.
 
 ---
 
