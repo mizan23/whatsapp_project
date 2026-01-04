@@ -1,196 +1,159 @@
-📡 WhatsApp NOC Alarm Notification System
+# 📡 WhatsApp NOC Alarm Notification System
 
-A production-grade WhatsApp alerting system for Network Operations Centers (NOC).
-This project monitors alarms from a PostgreSQL database and sends real-time WhatsApp notifications with alarm and clear delays to avoid flapping.
+A **production-ready WhatsApp alerting system** for Network Operations Centers (NOC).  
+This project monitors alarms from a **PostgreSQL database** and sends **real-time WhatsApp notifications** with configurable alarm and clear delays to prevent flapping.
 
-The system is designed to be reliable, debounced, and WhatsApp-friendly, using a local WhatsApp Web sender service instead of cloud APIs.
+The system uses a **local WhatsApp Web sender service**, avoiding paid APIs and approval requirements.
 
-🧩 Architecture Overview
-PostgreSQL (SNMP / Alarm DB)
-        ↓
+---
+
+## 🧩 Architecture
+
+PostgreSQL (Alarm DB)
+↓
 Python Alarm Monitor
-        ↓
+↓
 Local WhatsApp Sender API
-        ↓
-WhatsApp (Web / Linked Device)
+↓
+WhatsApp (Linked Device)
 
-✨ Features
+yaml
+Copy code
 
-🚨 Alarm notification with configurable delay
+---
 
-✅ Alarm clear notification with separate delay
+## ✨ Features
 
-🧠 Alarm de-duplication & suppression logic
+- 🚨 Alarm notification with delay
+- ✅ Alarm clear notification with delay
+- 🧠 Alarm de-duplication & suppression
+- ⏱ Poll-based monitoring
+- 📱 WhatsApp Web delivery (no Twilio / Meta API)
+- 🔁 Auto-reconnect WhatsApp session
+- 🧾 systemd service support
+- 🪵 Debug & structured logging
 
-⏱ Poll-based monitoring (safe for production DBs)
+---
 
-📱 WhatsApp delivery using WhatsApp Web (no Twilio / Meta API)
+## 📂 Project Structure
 
-🔁 Auto-reconnect WhatsApp session
-
-🧾 systemd service support
-
-🪵 Debug & structured logging
-
-📂 Project Structure
 .
-├── whatsapp_msg_multiple_alarms.py   # Main alarm monitor (Python)
-├── whatsapp_setup.sh                # WhatsApp sender installer
-├── sender.js                        # WhatsApp Web sender (Node.js)
-├── main.py                          # Optional / helper script
+├── whatsapp_msg_multiple_alarms.py # Main alarm monitor
+├── whatsapp_setup.sh # WhatsApp sender installer
+├── sender.js # WhatsApp Web sender (Node.js)
+├── main.py # Optional helper script
 └── README.md
 
-🛠️ Requirements
-System
+yaml
+Copy code
 
-Ubuntu / Debian-based Linux
+---
 
-systemd
+## 🛠️ Requirements
 
-Internet access (for WhatsApp login)
+### System
+- Ubuntu / Debian-based Linux
+- systemd
+- Internet access
 
-Python
-
-Python 3.8+
-
-Packages:
-
-pip install psycopg2 requests
-
+### Python
+- Python 3.8+
+- Dependencies:
+  ```bash
+  pip install psycopg2 requests
 Node.js
-
-Node.js v22+ (installed automatically by setup script)
-
-🔐 WhatsApp Sender (Web API)
-
-This project uses a local WhatsApp Web sender powered by Baileys.
-
-Why this approach?
-
-❌ No Twilio cost
-
-❌ No Meta WhatsApp Business approval
-
-✅ Uses your real WhatsApp account
-
-✅ Fast and reliable for NOC alerts
+Node.js v22+ (installed automatically)
 
 🚀 Installation
 1️⃣ Install WhatsApp Sender Service
+bash
+Copy code
 chmod +x whatsapp_setup.sh
 ./whatsapp_setup.sh
-
-
-This will:
-
-Install Node.js
-
-Install dependencies
-
-Create a systemd service
-
-Expose a local API at http://127.0.0.1:3000
+This installs Node.js, dependencies, and creates a systemd service.
 
 2️⃣ First-Time WhatsApp Login
+bash
+Copy code
 cd ~/whatsapp-sender
 node sender.js
+Scan the QR code using:
 
-
-📱 Scan the QR code using:
-
+css
+Copy code
 WhatsApp → Linked Devices → Link a device
+After successful login:
 
-
-Once connected:
-
+bash
+Copy code
 sudo systemctl enable whatsapp-sender
 sudo systemctl start whatsapp-sender
-
 3️⃣ Health Check
+bash
+Copy code
 curl http://127.0.0.1:3000/health
-
-
 Expected response:
 
+json
+Copy code
 { "whatsapp_ready": true }
-
-🧠 Alarm Monitor Configuration
-
+⚙️ Alarm Monitor Configuration
 Edit whatsapp_msg_multiple_alarms.py:
 
-Database
+Database Settings
+python
+Copy code
 DB_CONFIG = {
     "host": "localhost",
     "database": "snmptraps",
     "user": "snmpuser",
     "password": "toor"
 }
-
 WhatsApp Target
+python
+Copy code
 WHATSAPP_API = "http://127.0.0.1:3000/send"
 WHATSAPP_TO  = "8801870300750"  # no +
-
 Timing Controls
-POLL_INTERVAL     = 10   # seconds
-ALARM_DELAY_SEC   = 30
-CLEAR_DELAY_SEC   = 10
+python
+Copy code
+POLL_INTERVAL   = 10
+ALARM_DELAY_SEC = 30
+CLEAR_DELAY_SEC = 10
+🧠 Alarm Logic
+Alarms must persist for ALARM_DELAY_SEC before notification
 
-🧪 Alarm Logic
-Alarm Trigger
-
-Alarm must remain active for ALARM_DELAY_SEC
-
-Prevents transient/flapping alarms
-
-Clear Trigger
-
-Alarm must remain cleared for CLEAR_DELAY_SEC
-
-Suppression Logic
+Clears must persist for CLEAR_DELAY_SEC
 
 REM_SF alarms are suppressed if a LOCAL_FAULT exists for the same source
 
-🏃 Running the Monitor
+Prevents alarm flapping and duplicates
+
+▶️ Running the Monitor
+bash
+Copy code
 python3 whatsapp_msg_multiple_alarms.py
-
-
-Example WhatsApp alert:
-
-🚨 LOCAL_FAULT ALARM 🚨
-
-Site       : DHAKA
-Device     : Router
-Source     : GE0/1
-Severity   : CRITICAL
-Alarm ID   : 18291
-First Seen : 2025-01-01 12:30:00
-Device Time: 2025-01-01 12:29:59
-
-Link Down detected
-
-🪵 Logs & Debugging
-WhatsApp Sender Logs
+🪵 Logs
+WhatsApp Sender
+bash
+Copy code
 journalctl -u whatsapp-sender -f
-
 Python Monitor
+Timestamped logs
 
-Uses timestamped logs
-
-Optional debug batching to reduce log noise
+Optional debug batching
 
 ⚠️ Limitations
-
 WhatsApp account must stay logged in
 
-Single WhatsApp account per sender service
+Single WhatsApp account per sender
 
-Poll-based DB monitoring (not event-driven)
+Poll-based DB monitoring
 
 🔮 Future Enhancements
+Docker / Docker Compose
 
-Docker support
-
-Multiple WhatsApp recipients
+Multiple recipients
 
 Severity-based routing
 
@@ -198,9 +161,7 @@ Grafana / Prometheus integration
 
 Alarm acknowledgment support
 
-Rate-limiting protection
-
 🤝 Contributing
-
 Pull requests are welcome.
-Please open an issue for major changes or architectural discussions.
+Please open an issue for major changes.
+
