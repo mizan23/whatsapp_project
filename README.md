@@ -80,7 +80,7 @@ Install required Node packages
 
 Create a systemd service
 
-Expose a local API on http://127.0.0.1:3000
+Expose a local API at http://127.0.0.1:3000
 
 2️⃣ First-Time WhatsApp Login
 Run the sender manually once:
@@ -178,5 +178,3 @@ Alarm acknowledgment workflow
 🤝 Contributing
 Pull requests are welcome.
 Please open an issue for major changes or feature discussions.
-
-
