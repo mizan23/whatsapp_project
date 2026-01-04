@@ -1,180 +1,214 @@
-# 📡 WhatsApp NOC Alarm Notification System
+# 📩 WhatsApp Message Scheduler using Twilio (Python)
 
-A **production-ready WhatsApp alerting system** for Network Operations Centers (NOC).
+This project is a **Python-based WhatsApp message scheduler** built using the **Twilio WhatsApp API**.  
+It allows a user to schedule a WhatsApp message to be sent to an **individual recipient** at a **specific date and time**.
 
-This project monitors alarms from a **PostgreSQL database** and sends **real-time WhatsApp notifications** with configurable alarm and clear delays to prevent alarm flapping.
-
-The system uses a **local WhatsApp Web sender service**, avoiding paid APIs and WhatsApp Business approval requirements.
-
----
-
-## 🧩 Architecture
-
-PostgreSQL (Alarm Database)
-↓
-Python Alarm Monitor
-↓
-Local WhatsApp Sender API
-↓
-WhatsApp (Linked Device)
-
-yaml
-Copy code
+> ⚠️ **Note**  
+> WhatsApp group messaging is **not supported** by Twilio or WhatsApp APIs.  
+> This script works **only for one-to-one WhatsApp messages**.
 
 ---
 
 ## ✨ Features
 
-- 🚨 Alarm notification with configurable delay
-- ✅ Alarm clear notification with separate delay
-- 🧠 Alarm de-duplication and suppression logic
-- ⏱ Poll-based monitoring (safe for production DBs)
-- 📱 WhatsApp Web delivery (no Twilio / Meta API)
-- 🔁 Automatic WhatsApp reconnection
-- 🧾 systemd service support
-- 🪵 Structured and debug logging
-
----
-
-## 📂 Project Structure
-
-.
-├── whatsapp_msg_multiple_alarms.py # Main alarm monitoring script
-├── whatsapp_setup.sh # WhatsApp sender installer
-├── sender.js # WhatsApp Web sender (Node.js)
-├── main.py # Optional helper / test script
-└── README.md
-
-yaml
-Copy code
+- Send WhatsApp messages using Twilio  
+- Schedule messages for a future date and time  
+- Simple CLI-based user input  
+- Error handling for failed message delivery  
+- Clean and readable Python code  
 
 ---
 
 ## 🛠️ Requirements
 
-### System
-- Ubuntu / Debian-based Linux
-- systemd
-- Internet access
+### Python Version
+- Python **3.7 or higher**
 
-### Python
-- Python 3.8 or higher
-- Required packages:
-  ```bash
-  pip install psycopg2 requests
-Node.js
-Node.js v22 or higher
-(Installed automatically by the setup script)
+### Twilio Account
+- A Twilio account  
+- WhatsApp Sandbox enabled **or** an approved WhatsApp Business number  
 
-🚀 Installation
-1️⃣ Install WhatsApp Sender Service
-bash
-Copy code
-chmod +x whatsapp_setup.sh
-./whatsapp_setup.sh
-This will:
+### Python Libraries
+Install required dependencies:
 
-Install Node.js
+```bash
+pip install twilio
+```
 
-Install required Node packages
+---
 
-Create a systemd service
+## 🔐 Twilio Credentials Setup
 
-Expose a local API at http://127.0.0.1:3000
+You must provide the following credentials from your **Twilio Console**:
 
-2️⃣ First-Time WhatsApp Login
-Run the sender manually once:
+- **Account SID**
+- **Auth Token**
+- **Twilio WhatsApp Number**
 
-bash
-Copy code
-cd ~/whatsapp-sender
-node sender.js
-Scan the QR code using:
+Example:
 
-css
-Copy code
-WhatsApp → Linked Devices → Link a device
-After successful login, enable background service:
+```python
+account_sid = 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+auth_token = 'your_auth_token_here'
+from_number = '+14155238886'
+```
 
-bash
-Copy code
-sudo systemctl enable whatsapp-sender
-sudo systemctl start whatsapp-sender
-3️⃣ Health Check
-bash
-Copy code
-curl http://127.0.0.1:3000/health
-Expected response:
+> ⚠️ **Security Warning**  
+> Never commit real credentials to GitHub.  
+> Use **environment variables** or `.env` files in production.
 
-json
-Copy code
-{
-  "whatsapp_ready": true
-}
-⚙️ Alarm Monitor Configuration
-Edit whatsapp_msg_multiple_alarms.py.
+---
 
-Database Configuration
-python
-Copy code
-DB_CONFIG = {
-    "host": "localhost",
-    "database": "snmptraps",
-    "user": "snmpuser",
-    "password": "toor"
-}
-WhatsApp Target
-python
-Copy code
-WHATSAPP_API = "http://127.0.0.1:3000/send"
-WHATSAPP_TO  = "8801870300750"  # country code only, no "+"
-Timing Controls
-python
-Copy code
-POLL_INTERVAL   = 10   # seconds
-ALARM_DELAY_SEC = 30
-CLEAR_DELAY_SEC = 10
-🧠 Alarm Logic
-Alarm must remain active for ALARM_DELAY_SEC before notification
+## 🚀 How to Run the Script
 
-Clear must remain inactive for CLEAR_DELAY_SEC
+### Clone the Repository
 
-REM_SF alarms are suppressed if a LOCAL_FAULT exists for the same source
+```bash
+git clone https://github.com/your-username/whatsapp-message-scheduler.git
+cd whatsapp-message-scheduler
+```
 
-Prevents duplicate and flapping alerts
+### Run the Script
 
-▶️ Running the Alarm Monitor
-bash
-Copy code
-python3 whatsapp_msg_multiple_alarms.py
-🪵 Logs & Debugging
-WhatsApp Sender Logs
-bash
-Copy code
-journalctl -u whatsapp-sender -f
-Python Monitor Logs
-Timestamped output
+```bash
+python send_whatsapp.py
+```
 
-Optional debug batching to reduce noise
+### Follow the Prompts
 
-⚠️ Limitations
-WhatsApp account must stay logged in
+- Enter recipient name  
+- Enter recipient WhatsApp number  
+- Enter message content  
+- Enter scheduled date  
+- Enter scheduled time  
 
-One WhatsApp account per sender service
+---
 
-Poll-based monitoring (not event-driven)
+## 🧠 How the Code Works (Line-by-Line Explanation)
 
-🔮 Future Enhancements
-Docker / Docker Compose support
+### Step 1: Import Required Libraries
 
-Multiple WhatsApp recipients
+```python
+from twilio.rest import Client
+from datetime import datetime, timedelta
+import time
+```
 
-Severity-based routing
+- `Client` – Twilio SDK client  
+- `datetime` – Date and time handling  
+- `time` – Execution delay  
 
-Grafana / Prometheus integration
+---
 
-Alarm acknowledgment workflow
+### Step 2: Define Twilio Credentials
 
-🤝 Contributing
-Pull requests are welcome.
-Please open an issue for major changes or feature discussions.
+```python
+account_sid = '#############################'
+auth_token = '################################'
+from_number = '+14155238886'
+```
+
+---
+
+### Step 3: Initialize Twilio Client
+
+```python
+client = Client(account_sid, auth_token)
+```
+
+---
+
+### Step 4: Define WhatsApp Message Function
+
+```python
+def send_whatsapp_message(recipient_number, message_body):
+    message = client.messages.create(
+        from_='whatsapp:+14155238886',
+        body=message_body,
+        to=f'whatsapp:{recipient_number}'
+    )
+```
+
+---
+
+### Step 5: Collect User Input
+
+```python
+name = input("Enter the recipient's name: ")
+recipient_number = input("Enter the recipient's WhatsApp number: ")
+message_body = input(f"Enter the message to send to {name}: ")
+```
+
+---
+
+### Step 6: Collect Scheduled Date and Time
+
+```python
+date_str = input("Enter the date to send the message (DD-MM-YYYY): ")
+time_str = input("Enter the time to send the message (HH:MM): ")
+```
+
+---
+
+### Step 7: Convert to datetime Object
+
+```python
+scheduled_datetime = datetime.strptime(
+    f"{date_str} {time_str}", "%d-%m-%Y %H:%M"
+)
+```
+
+---
+
+### Step 8: Calculate Delay
+
+```python
+current_datetime = datetime.now()
+time_difference = scheduled_datetime - current_datetime
+delay_seconds = time_difference.total_seconds()
+```
+
+---
+
+### Step 9: Validate Scheduled Time
+
+```python
+if delay_seconds <= 0:
+    print("The scheduled time is in the past.")
+```
+
+---
+
+### Step 10: Wait and Send Message
+
+```python
+time.sleep(delay_seconds)
+send_whatsapp_message(recipient_number, message_body)
+```
+
+---
+
+## ⚠️ Limitations
+
+- ❌ Cannot send messages to WhatsApp groups  
+- ❌ Script must remain running until message is sent  
+- ❌ Not suitable for large-scale production  
+
+---
+
+## 🔮 Possible Enhancements
+
+- Use `cron` or `APScheduler`
+- CSV-based recipients
+- Logging support
+- Environment variables
+- Retry logic
+- Docker support
+
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome.  
+Please open an issue for major changes.
