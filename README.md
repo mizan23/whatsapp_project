@@ -1,214 +1,206 @@
-# 📩 WhatsApp Message Scheduler using Twilio (Python)
+📡 WhatsApp NOC Alarm Notification System
 
-This project is a **Python-based WhatsApp message scheduler** built using the **Twilio WhatsApp API**.  
-It allows a user to schedule a WhatsApp message to be sent to an **individual recipient** at a **specific date and time**.
+A production-grade WhatsApp alerting system for Network Operations Centers (NOC).
+This project monitors alarms from a PostgreSQL database and sends real-time WhatsApp notifications with alarm and clear delays to avoid flapping.
 
-> ⚠️ **Note**  
-> WhatsApp group messaging is **not supported** by Twilio or WhatsApp APIs.  
-> This script works **only for one-to-one WhatsApp messages**.
+The system is designed to be reliable, debounced, and WhatsApp-friendly, using a local WhatsApp Web sender service instead of cloud APIs.
 
----
+🧩 Architecture Overview
+PostgreSQL (SNMP / Alarm DB)
+        ↓
+Python Alarm Monitor
+        ↓
+Local WhatsApp Sender API
+        ↓
+WhatsApp (Web / Linked Device)
 
-## ✨ Features
+✨ Features
 
-- Send WhatsApp messages using Twilio  
-- Schedule messages for a future date and time  
-- Simple CLI-based user input  
-- Error handling for failed message delivery  
-- Clean and readable Python code  
+🚨 Alarm notification with configurable delay
 
----
+✅ Alarm clear notification with separate delay
 
-## 🛠️ Requirements
+🧠 Alarm de-duplication & suppression logic
 
-### Python Version
-- Python **3.7 or higher**
+⏱ Poll-based monitoring (safe for production DBs)
 
-### Twilio Account
-- A Twilio account  
-- WhatsApp Sandbox enabled **or** an approved WhatsApp Business number  
+📱 WhatsApp delivery using WhatsApp Web (no Twilio / Meta API)
 
-### Python Libraries
-Install required dependencies:
+🔁 Auto-reconnect WhatsApp session
 
-```bash
-pip install twilio
-```
+🧾 systemd service support
 
----
+🪵 Debug & structured logging
 
-## 🔐 Twilio Credentials Setup
+📂 Project Structure
+.
+├── whatsapp_msg_multiple_alarms.py   # Main alarm monitor (Python)
+├── whatsapp_setup.sh                # WhatsApp sender installer
+├── sender.js                        # WhatsApp Web sender (Node.js)
+├── main.py                          # Optional / helper script
+└── README.md
 
-You must provide the following credentials from your **Twilio Console**:
+🛠️ Requirements
+System
 
-- **Account SID**
-- **Auth Token**
-- **Twilio WhatsApp Number**
+Ubuntu / Debian-based Linux
 
-Example:
+systemd
 
-```python
-account_sid = 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-auth_token = 'your_auth_token_here'
-from_number = '+14155238886'
-```
+Internet access (for WhatsApp login)
 
-> ⚠️ **Security Warning**  
-> Never commit real credentials to GitHub.  
-> Use **environment variables** or `.env` files in production.
+Python
 
----
+Python 3.8+
 
-## 🚀 How to Run the Script
+Packages:
 
-### Clone the Repository
+pip install psycopg2 requests
 
-```bash
-git clone https://github.com/your-username/whatsapp-message-scheduler.git
-cd whatsapp-message-scheduler
-```
+Node.js
 
-### Run the Script
+Node.js v22+ (installed automatically by setup script)
 
-```bash
-python send_whatsapp.py
-```
+🔐 WhatsApp Sender (Web API)
 
-### Follow the Prompts
+This project uses a local WhatsApp Web sender powered by Baileys.
 
-- Enter recipient name  
-- Enter recipient WhatsApp number  
-- Enter message content  
-- Enter scheduled date  
-- Enter scheduled time  
+Why this approach?
 
----
+❌ No Twilio cost
 
-## 🧠 How the Code Works (Line-by-Line Explanation)
+❌ No Meta WhatsApp Business approval
 
-### Step 1: Import Required Libraries
+✅ Uses your real WhatsApp account
 
-```python
-from twilio.rest import Client
-from datetime import datetime, timedelta
-import time
-```
+✅ Fast and reliable for NOC alerts
 
-- `Client` – Twilio SDK client  
-- `datetime` – Date and time handling  
-- `time` – Execution delay  
+🚀 Installation
+1️⃣ Install WhatsApp Sender Service
+chmod +x whatsapp_setup.sh
+./whatsapp_setup.sh
 
----
 
-### Step 2: Define Twilio Credentials
+This will:
 
-```python
-account_sid = '#############################'
-auth_token = '################################'
-from_number = '+14155238886'
-```
+Install Node.js
 
----
+Install dependencies
 
-### Step 3: Initialize Twilio Client
+Create a systemd service
 
-```python
-client = Client(account_sid, auth_token)
-```
+Expose a local API at http://127.0.0.1:3000
 
----
+2️⃣ First-Time WhatsApp Login
+cd ~/whatsapp-sender
+node sender.js
 
-### Step 4: Define WhatsApp Message Function
 
-```python
-def send_whatsapp_message(recipient_number, message_body):
-    message = client.messages.create(
-        from_='whatsapp:+14155238886',
-        body=message_body,
-        to=f'whatsapp:{recipient_number}'
-    )
-```
+📱 Scan the QR code using:
 
----
+WhatsApp → Linked Devices → Link a device
 
-### Step 5: Collect User Input
 
-```python
-name = input("Enter the recipient's name: ")
-recipient_number = input("Enter the recipient's WhatsApp number: ")
-message_body = input(f"Enter the message to send to {name}: ")
-```
+Once connected:
 
----
+sudo systemctl enable whatsapp-sender
+sudo systemctl start whatsapp-sender
 
-### Step 6: Collect Scheduled Date and Time
+3️⃣ Health Check
+curl http://127.0.0.1:3000/health
 
-```python
-date_str = input("Enter the date to send the message (DD-MM-YYYY): ")
-time_str = input("Enter the time to send the message (HH:MM): ")
-```
 
----
+Expected response:
 
-### Step 7: Convert to datetime Object
+{ "whatsapp_ready": true }
 
-```python
-scheduled_datetime = datetime.strptime(
-    f"{date_str} {time_str}", "%d-%m-%Y %H:%M"
-)
-```
+🧠 Alarm Monitor Configuration
 
----
+Edit whatsapp_msg_multiple_alarms.py:
 
-### Step 8: Calculate Delay
+Database
+DB_CONFIG = {
+    "host": "localhost",
+    "database": "snmptraps",
+    "user": "snmpuser",
+    "password": "toor"
+}
 
-```python
-current_datetime = datetime.now()
-time_difference = scheduled_datetime - current_datetime
-delay_seconds = time_difference.total_seconds()
-```
+WhatsApp Target
+WHATSAPP_API = "http://127.0.0.1:3000/send"
+WHATSAPP_TO  = "8801870300750"  # no +
 
----
+Timing Controls
+POLL_INTERVAL     = 10   # seconds
+ALARM_DELAY_SEC   = 30
+CLEAR_DELAY_SEC   = 10
 
-### Step 9: Validate Scheduled Time
+🧪 Alarm Logic
+Alarm Trigger
 
-```python
-if delay_seconds <= 0:
-    print("The scheduled time is in the past.")
-```
+Alarm must remain active for ALARM_DELAY_SEC
 
----
+Prevents transient/flapping alarms
 
-### Step 10: Wait and Send Message
+Clear Trigger
 
-```python
-time.sleep(delay_seconds)
-send_whatsapp_message(recipient_number, message_body)
-```
+Alarm must remain cleared for CLEAR_DELAY_SEC
 
----
+Suppression Logic
 
-## ⚠️ Limitations
+REM_SF alarms are suppressed if a LOCAL_FAULT exists for the same source
 
-- ❌ Cannot send messages to WhatsApp groups  
-- ❌ Script must remain running until message is sent  
-- ❌ Not suitable for large-scale production  
+🏃 Running the Monitor
+python3 whatsapp_msg_multiple_alarms.py
 
----
 
-## 🔮 Possible Enhancements
+Example WhatsApp alert:
 
-- Use `cron` or `APScheduler`
-- CSV-based recipients
-- Logging support
-- Environment variables
-- Retry logic
-- Docker support
+🚨 LOCAL_FAULT ALARM 🚨
 
+Site       : DHAKA
+Device     : Router
+Source     : GE0/1
+Severity   : CRITICAL
+Alarm ID   : 18291
+First Seen : 2025-01-01 12:30:00
+Device Time: 2025-01-01 12:29:59
 
----
+Link Down detected
 
-## 🤝 Contributing
+🪵 Logs & Debugging
+WhatsApp Sender Logs
+journalctl -u whatsapp-sender -f
 
-Pull requests are welcome.  
-Please open an issue for major changes.
+Python Monitor
+
+Uses timestamped logs
+
+Optional debug batching to reduce log noise
+
+⚠️ Limitations
+
+WhatsApp account must stay logged in
+
+Single WhatsApp account per sender service
+
+Poll-based DB monitoring (not event-driven)
+
+🔮 Future Enhancements
+
+Docker support
+
+Multiple WhatsApp recipients
+
+Severity-based routing
+
+Grafana / Prometheus integration
+
+Alarm acknowledgment support
+
+Rate-limiting protection
+
+🤝 Contributing
+
+Pull requests are welcome.
+Please open an issue for major changes or architectural discussions.
